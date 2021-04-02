@@ -1,0 +1,251 @@
+<html>
+    <head>
+        <title>Spin Wheel</title>
+        <style>
+            .spoke{
+                height:0px;
+                width:0px;
+                border-width: 14.738054930840176px 0px 14.738054930840176px 300px;
+                border-color: transparent;
+                border-style: solid;
+                position: absolute;
+                top:400px;
+                left:400px;
+                transform-origin: 300px 15px;
+            }
+            .spoke-odd{
+                border-left-color: beige;
+            }
+            .spoke-even{
+                border-left-color: lightblue;
+            }
+            .name{
+                position: absolute;
+                padding: 10px;
+                background: #eee;
+                color:#222;
+                border-radius: 20px;
+                text-align: center;
+            }
+            #arrow{
+                height:0px;
+                width:0px;
+                border-width: 15px 15px 15px 250px;
+                border-color: transparent;
+                border-style: solid;
+                position: absolute;
+                border-left-color: goldenrod;
+                border-right-color: goldenrod;
+                top:400px;
+                left:450px;
+                transform-origin: 250px 15px;
+                border-radius: 0px 15px 15px 0px; 
+                z-index:2;
+            }
+            #arrow::before{
+                content:'';
+                height:0px;
+                width:0px;
+                border-width: 15px 15px 15px 15px;
+                border-color: transparent;
+                border-style: solid;
+                position: absolute;
+                border-right-color: goldenrod;
+                top:-15px;
+                left:-280px;
+            }
+            .names-label,#names{
+                display: block;
+                margin: 5px;
+            }
+            #spin-button{
+                position: absolute;
+                left: 640px;
+                top: 20px;
+                width: 100px;
+                padding: 5px;
+                font-size: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <label class="names-label">Names:</label>
+            <textarea id="names" rows="5" cols="50"></textarea>
+            <button id="start-button" onclick="start()">Start</button>
+        </div>
+        <button id="spin-button" disabled onclick="spin()">Spin</button>
+        <div id="container">
+        </div>
+        
+        <script>
+            const TOTAL_DEGREES = 360;
+            const INITIAL_TIME_STEP = 0.1;
+            const INITIAL_ROTATION_COUNT = 3;
+            const INITIAL_ANGLE_STEP = 5;
+            const SECOND_ITERATION_TIME_STEP = 5;
+            const SPOKES_COUNT = 72;
+            const SPOKE_ANGLE = 5;
+            const ROTATION_COUNT_DECREMENT = 1;
+            const NEXT_ITER_ANGLE_DECREMENT = 2;
+            const NEXT_ITER_TIME_INCREMENT = 5;
+            var arrowDegree = 0;
+            var rotation_count = 0;
+            var arrowEle;
+            var interval;
+            var selectedDegree;
+            var nameList = [];
+            var container = document.getElementById('container');
+            
+            
+            function initBoard(){
+                clearBoard();
+                disableSpinButton();
+                createBoard();
+                arrowEle = document.getElementById('arrow');
+                arrowDegree = 0;
+                rotation_count = 0;
+                interval;
+                selectedDegree;
+            }
+            
+            function enableSpinButton(){
+                document.getElementById("spin-button").removeAttribute('disabled');
+            }
+            
+            function disableSpinButton(){
+                document.getElementById("spin-button").setAttribute('disabled',true);
+            }
+            
+            function clearBoard(){
+                document.getElementById('container').innerHTML = '';
+            }
+            
+            function createBoard(){
+                for(var index=0; index < SPOKES_COUNT; index++){
+                    createSpokeElement(index);
+                }
+                createArrowElement();
+            }
+            
+            function createSpokeElement(index){
+                var ele = document.createElement("div");
+                ele.classList = index%2 ? ['spoke spoke-odd'] : ['spoke spoke-even']; 
+                ele.style.transform = 'rotate('+(index*SPOKE_ANGLE)+'deg)';
+                container.appendChild(ele);
+            }
+            
+            function createArrowElement(){
+                var ele = document.createElement("div");
+                ele.setAttribute("id","arrow");
+                container.appendChild(ele);
+            }
+            
+            function createNames(){
+                for(var index = 0; index < nameList.length; index++){
+                    var ele = document.createElement("div");
+                    ele.innerHTML= (nameList[index]);
+                    ele.classList = ['name'];
+                    var position = calculateNamePosition(nameList.length, index);
+                    ele.style.left = position.left;
+                    ele.style.top = position.top;
+                    container.appendChild(ele);
+                }
+            }
+            
+            function calculateNamePosition(count, index){
+                var radians = (Math.PI/count*index*2);
+                var position = {}
+                //TODO: Need to refactor the magic numbers
+                position.left = Math.cos(radians)* -350 + 700 - 40; 
+                position.top = Math.sin(radians)* -350 + 400;
+                return position;
+            }
+            
+            function getRandomIndex(size){
+                return Math.floor(Math.random() * size);
+            }
+            
+            function calculateAngle(count, index){
+                return(TOTAL_DEGREES/count)*index;
+            }
+            
+            function spin(){
+                disableSpinButton();
+                var selectedIndex = getRandomIndex(nameList.length)
+                selectedDegree = calculateAngle(nameList.length, selectedIndex);
+                interval= setInterval(rotateArrow,
+                                      INITIAL_TIME_STEP,
+                                      INITIAL_ROTATION_COUNT,
+                                      INITIAL_ANGLE_STEP,
+                                      SECOND_ITERATION_TIME_STEP);
+            }
+            
+            function rotateArrow(rotation_limit, angle_step, next_iteration_time_step){
+                if(arrowDegree >= TOTAL_DEGREES){
+                    arrowDegree = 0;
+                    rotation_count++;
+                    if(rotation_count > rotation_limit){
+                        rotation_count = 0;
+                        rotationCompletionAction(rotation_limit, next_iteration_time_step, angle_step);
+                    }
+                }
+                arrowEle.style.transform = 'rotate('+arrowDegree+'deg)';
+                arrowDegree+=angle_step;
+            }
+            
+            function rotationCompletionAction(rotation_limit, next_iteration_time_step, angle_step){
+                window.clearInterval(interval)
+                if( rotation_limit > 1){
+                    interval= setInterval(rotateArrow,
+                                          next_iteration_time_step,
+                                          rotation_limit - ROTATION_COUNT_DECREMENT,
+                                          angle_step - NEXT_ITER_ANGLE_DECREMENT,
+                                          next_iteration_time_step + NEXT_ITER_TIME_INCREMENT);
+                }
+                else{
+                    interval= setInterval(pointArrowToSelectedName, 
+                                          next_iteration_time_step + NEXT_ITER_TIME_INCREMENT);
+                }
+            }
+            
+            function pointArrowToSelectedName(){
+                if(arrowDegree >= selectedDegree){
+                    window.clearInterval(interval);
+                    enableSpinButton();
+                }
+                arrowEle.style.transform = 'rotate('+arrowDegree+'deg)';
+                arrowDegree++;
+            }
+            
+            function start(){
+                nameList = getNames();
+                //TODO: Need to refactor the magic numbers
+                if(nameList.length < 2){
+                    nameList = [];
+                    alert('Give atleast 2 names to start');
+                    return;
+                }
+                initBoard();
+                enableSpinButton();
+                createNames();
+            }
+            
+            function getNames(){
+                var names = [];
+                var lines = document.getElementById("names").value.split("\n");
+                for(var lidx = 0; lidx < lines.length; lidx++){
+                    var words = lines[lidx].split(",");
+                    for(var widx = 0; widx < words.length; widx++){
+                        var name = words[widx].trim();
+                        if(name != ""){
+                            names.push(name);
+                        }
+                    }
+                }
+                return names;
+            }
+            
+        </script>
+    </body>
+</html>
